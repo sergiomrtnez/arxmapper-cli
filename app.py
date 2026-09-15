@@ -1,12 +1,13 @@
-"""app.py - Punto de entrada interactivo y TUI de ArxMapper.
+"""app.py - Punto de entrada interactivo y TUI de ArxMapper con Loading Screen de Escolopendra.
 
-Configura la interfaz visual Textual con vista dividida:
-- Panel izquierdo: Árbol interactivo del repositorio (scanner.py).
-- Panel derecho: Visor Markdown con documentación arquitectónica generada por Ollama (ai_engine.py).
+Integra una pantalla de carga animada (LoadingScreen) con un logo ASCII en forma de
+escolopendra que se dibuja progresivamente línea por línea mediante set_interval.
+Mientras el insecto repta en pantalla, un worker en segundo plano (@work / asyncio.to_thread)
+escanea el repositorio de código sin congelar la interfaz ni bloquear el renderizado.
 
-Implementa la regla crítica de Carga Perezosa (Lazy Loading): el árbol arranca
-instantáneamente y los archivos se procesan mediante un worker asíncrono
-únicamente cuando el usuario los selecciona en la interfaz.
+Una vez terminado el escaneo, transiciona a la vista principal en pantalla dividida
+(Panel izquierdo: Tree; Panel derecho: Markdown) manteniendo la Carga Perezosa (Lazy Loading)
+al seleccionar archivos.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import Screen
 from textual.widgets import Footer, Header, Markdown, Static, Tree
 
 import ai_engine
@@ -36,6 +38,44 @@ from scanner import RepoScanner
 
 
 console = Console()
+
+# ==============================================================================
+# Arte ASCII de la Escolopendra (Rich Markup)
+# ==============================================================================
+
+LOGO_ART = r"""
+[bold bright_black]         \ \          / /
+          \ \________/ /
+       ___/::::::::::::\___[/bold bright_black]
+[bold yellow]  -----[/bold yellow][bold bright_black]|  _. [/bold bright_black][bold red](██)(██)[/bold red][bold bright_black] ._  |[/bold bright_black][bold yellow]-----
+   -----\_//    [bold yellow]▼▼[/bold yellow]    \\_/-----[/bold yellow]
+[bold bright_black]          /==============\ [/bold bright_black]
+[bold yellow]    -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+      ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]            /==============\ [/bold bright_black]
+[bold yellow]      -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+        ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]                /==============\ [/bold bright_black]
+[bold yellow]          -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+            ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]                  /==============\ [/bold bright_black]
+[bold yellow]            -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+              ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]                /==============\ [/bold bright_black]
+[bold yellow]          -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+            ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]            /==============\ [/bold bright_black]
+[bold yellow]      -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+        ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]        /==============\ [/bold bright_black]
+[bold yellow]  -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+    ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]          /==============\ [/bold bright_black]
+[bold yellow]    -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
+      ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
+[bold bright_black]             \        /
+              \______/[/bold bright_black]
+"""
 
 WELCOME_MARKDOWN = """# 🏛️ ArxMapper - Arquitectura con IA Local
 
@@ -54,6 +94,126 @@ Bienvenido al analizador interactivo de arquitectura de repositorios.
 *Selecciona un archivo del panel izquierdo para comenzar.*
 """
 
+
+# ==============================================================================
+# Widget Personalizado: Logo Animado de Escolopendra
+# ==============================================================================
+
+class ScolopendraLogo(Static):
+    """Widget que anima progresivamente el logo ASCII de la escolopendra línea por línea.
+
+    Utiliza `set_interval` de Textual para añadir líneas de arriba a abajo a intervalos
+    regulares, generando la ilusión de que el insecto está reptando hacia la pantalla.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        # Extraer cada línea del ASCII art preservando etiquetas Rich
+        self.art_lines: List[str] = [line for line in LOGO_ART.strip("\r\n").splitlines()]
+        self.current_line_idx: int = 0
+        self._timer = None
+        self.is_completed: bool = False
+
+    def on_mount(self) -> None:
+        """Inicia el temporizador de dibujo progresivo."""
+        self.update("")
+        # 45 ms por línea produce un reptado fluido de ~1.4 segundos para 31 líneas
+        self._timer = self.set_interval(0.045, self._step_draw)
+
+    def _step_draw(self) -> None:
+        """Dibuja progresivamente una línea más del insecto reptando."""
+        if self.current_line_idx < len(self.art_lines):
+            self.current_line_idx += 1
+            rendered_art = "\n".join(self.art_lines[:self.current_line_idx])
+            self.update(rendered_art)
+        else:
+            self.is_completed = True
+            if self._timer:
+                self._timer.stop()
+
+
+# ==============================================================================
+# Pantalla de Carga Animada (LoadingScreen)
+# ==============================================================================
+
+class LoadingScreen(Screen[Dict[str, Any]]):
+    """Pantalla de carga que muestra la escolopendra animada mientras escanea en segundo plano."""
+
+    CSS = """
+    LoadingScreen {
+        align: center middle;
+        background: #0d1117;
+    }
+
+    #loading-container {
+        width: auto;
+        height: auto;
+        align: center middle;
+        border: round $accent;
+        background: #161b22;
+        padding: 1 4;
+    }
+
+    #scolopendra-widget {
+        width: auto;
+        height: 32;
+        content-align: center middle;
+    }
+
+    #loading-title {
+        text-align: center;
+        text-style: bold;
+        color: $accent-lighten-2;
+        margin-top: 1;
+    }
+
+    #loading-status {
+        text-align: center;
+        color: #8b949e;
+        margin-bottom: 1;
+    }
+    """
+
+    def __init__(self, repo_path: Path, scanner: RepoScanner, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.repo_path = repo_path
+        self.scanner = scanner
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="loading-container"):
+            yield ScolopendraLogo(id="scolopendra-widget")
+            yield Static("ArxMapper 🏛️ | Rastreando Arquitectura", id="loading-title")
+            yield Static("Escaneando directorios, paquetes y dependencias en segundo plano...", id="loading-status")
+
+    def on_mount(self) -> None:
+        """Lanza la tarea de escaneo asíncrona sin bloquear la animación ni el hilo principal."""
+        self.run_background_scan()
+
+    @work(exclusive=True)
+    async def run_background_scan(self) -> None:
+        """Worker en segundo plano que procesa el repositorio y espera a la animación."""
+        status_label = self.query_one("#loading-status", Static)
+        status_label.update("[dim]Indexando estructura del repositorio y proyectos Spring Boot...[/dim]")
+
+        # 1. Ejecución I/O en hilo secundario (asyncio.to_thread) para no congelar la UI ni un frame
+        hierarchy = await asyncio.to_thread(self.scanner.get_hierarchy, self.repo_path)
+
+        # 2. Esperar a que la escolopendra termine de reptar para garantizar el efecto visual
+        logo = self.query_one(ScolopendraLogo)
+        while not logo.is_completed:
+            await asyncio.sleep(0.04)
+
+        status_label.update("[bold green]✓ Árbol indexado con éxito. Accediendo a la TUI...[/bold green]")
+        # 3. Breve pausa estética para asentar la vista
+        await asyncio.sleep(0.3)
+
+        # 4. Oculta la pantalla de carga y devuelve la estructura a la aplicación principal
+        self.dismiss(hierarchy)
+
+
+# ==============================================================================
+# Aplicación Principal Textual (Vista Dividida)
+# ==============================================================================
 
 class RepoMapperApp(App):
     """Aplicación Textual con vista dividida y carga perezosa para análisis de repositorios."""
@@ -129,6 +289,7 @@ class RepoMapperApp(App):
         self.scanner = RepoScanner(root_path=self.repo_path)
         self.ai_engine = AIEngine(model=self.active_model)
         self.sub_title = f"Modelo: {self.active_model} | {self.repo_path.name}"
+        self.hierarchy_data: Optional[Dict[str, Any]] = None
 
     def compose(self) -> ComposeResult:
         """Configura la estructura visual de dos paneles."""
@@ -145,22 +306,50 @@ class RepoMapperApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Monta el árbol visual al instante sin llamar al LLM (Lazy Loading estricto)."""
-        self.load_tree()
+        """Lanza la pantalla de carga animada de la escolopendra al arrancar."""
+        self.push_screen(
+            LoadingScreen(repo_path=self.repo_path, scanner=self.scanner),
+            callback=self.on_scan_completed,
+        )
 
-    def load_tree(self) -> None:
-        """Carga o recarga la jerarquía de archivos en el componente Tree."""
+    def on_scan_completed(self, hierarchy: Dict[str, Any]) -> None:
+        """Monta y puebla el árbol de archivos en la vista principal una vez finalizada la carga."""
+        self.hierarchy_data = hierarchy
         tree = self.query_one("#repo-tree", Tree)
         tree.clear()
         tree.root.data = {"path": self.repo_path, "is_dir": True}
         tree.root.label = f"📁 {self.repo_path.name}"
-        self.scanner.populate_textual_tree(tree.root, self.repo_path)
+        
+        # Poblar el árbol en memoria a partir de la jerarquía calculada en segundo plano
+        self._populate_tree_recursive(tree.root, hierarchy)
         tree.root.expand()
+        self.notify(f"✓ Repositorio '{self.repo_path.name}' indexado con éxito.", title="ArxMapper")
+
+    def _populate_tree_recursive(self, tree_node: Any, data: Dict[str, Any]) -> None:
+        """Construye los nodos visuales del Tree a partir del diccionario estructurado."""
+        for child in data.get("children", []):
+            is_dir = child.get("is_dir", False)
+            child_path: Path = child["path"]
+            if is_dir:
+                dir_node = tree_node.add(
+                    f"📁 {child['name']}",
+                    data={"path": child_path, "is_dir": True},
+                    expand=False,
+                )
+                self._populate_tree_recursive(dir_node, child)
+            else:
+                icon = RepoScanner._get_file_icon(child_path.suffix.lower())
+                tree_node.add_leaf(
+                    f"{icon} {child['name']}",
+                    data={"path": child_path, "is_dir": False},
+                )
 
     def action_refresh_tree(self) -> None:
-        """Acción de atajo 'r' para recargar el árbol del repositorio."""
-        self.load_tree()
-        self.notify("Árbol de directorios actualizado.", title="ArxMapper")
+        """Acción de atajo 'r': relanza la pantalla de carga y reescanea el repositorio."""
+        self.push_screen(
+            LoadingScreen(repo_path=self.repo_path, scanner=self.scanner),
+            callback=self.on_scan_completed,
+        )
 
     def action_toggle_theme(self) -> None:
         """Acción de atajo 't' para alternar temas visuales."""
@@ -170,7 +359,7 @@ class RepoMapperApp(App):
         """Captura la selección de un nodo en el árbol.
 
         Si es un directorio: expande o contrae.
-        Si es un archivo: activa el análisis perezoso con el LLM.
+        Si es un archivo: activa el análisis perezoso con el LLM (Lazy Loading).
         """
         node = event.node
         node_data = node.data or {}
