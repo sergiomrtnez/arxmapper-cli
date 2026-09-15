@@ -41,6 +41,7 @@ Conectado directamente a **Ollama**, ArxMapper examina el código fuente localme
   - Detecta si Ollama está instalado en el sistema (ofreciendo instalación automática en Windows vía `winget`).
   - Lista los modelos disponibles localmente.
   - Ofrece un catálogo curado de modelos recomendados para análisis de código (`qwen2.5-coder`, `llama3.2`, `codellama`) con descarga guiada y barra de progreso interactiva.
+- 🐛 **Pantalla de Carga Animada (Escolopendra):** Renderizado progresivo línea por línea con `set_interval` mientras un worker en segundo plano (`@work` / `asyncio.to_thread`) indexa el repositorio (proyectos Spring Boot, Python, etc.) sin congelar la interfaz.
 - 🚀 **Asincronía Total sin Bloqueos:** El análisis se ejecuta en workers de segundo plano (`@work(exclusive=True)`), permitiendo navegar por la interfaz sin congelar la terminal.
 
 ---
@@ -84,7 +85,7 @@ flowchart TD
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/tu-usuario/arxmapper-cli.git
+git clone https://github.com/sergiomrtnez/arxmapper-cli.git
 cd arxmapper-cli
 ```
 
