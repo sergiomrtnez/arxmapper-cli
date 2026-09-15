@@ -50,7 +50,7 @@ Conectado directamente a **Ollama**, ArxMapper examina el código fuente localme
 
 ```mermaid
 flowchart TD
-    subgraph Inicialización
+    subgraph init ["Inicialización"]
         A["python app.py"] --> B{"¿Ollama instalado?"}
         B -- No --> C["Instalación guiada (winget / web)"]
         B -- Sí --> D{"¿Servidor activo?"}
@@ -62,12 +62,12 @@ flowchart TD
         H --> I
     end
 
-    subgraph TUI Textual (Lazy Loading)
-        I --> J["Montar RepoMapperApp"]
-        J --> K["scanner.py: Lee y filtra árbol de carpetas"]
+    subgraph tui ["TUI Textual (Lazy Loading)"]
+        I --> J["Montar RepoMapperApp y Pantalla de Escolopendra"]
+        J --> K["scanner.py: Escaneo asíncrono en background"]
         K --> L["Renderizar componente Tree al instante"]
         L --> M{"Usuario selecciona archivo"}
-        M --> N["Estado reactivo: 'Generando análisis...'"]
+        M --> N["Estado reactivo: Generando análisis..."]
         N --> O["ai_engine.py: Prompt estructurado asíncrono"]
         O --> P[("Ollama Local LLM")]
         P --> Q["Resumen técnico en viñetas"]
