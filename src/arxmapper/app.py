@@ -32,9 +32,14 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Markdown, Static, Tree
 
-import ai_engine
-from ai_engine import AIEngine, RECOMMENDED_MODELS
-from scanner import RepoScanner
+try:
+    from . import ai_engine
+    from .ai_engine import AIEngine, RECOMMENDED_MODELS
+    from .scanner import RepoScanner
+except ImportError:
+    import ai_engine
+    from ai_engine import AIEngine, RECOMMENDED_MODELS
+    from scanner import RepoScanner
 
 
 console = Console()

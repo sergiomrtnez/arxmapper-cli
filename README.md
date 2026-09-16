@@ -51,7 +51,7 @@ Conectado directamente a **Ollama**, ArxMapper examina el código fuente localme
 ```mermaid
 flowchart TD
     subgraph init ["Inicialización"]
-        A["python app.py"] --> B{"¿Ollama instalado?"}
+        A["arxmapper / python -m arxmapper"] --> B{"¿Ollama instalado?"}
         B -- No --> C["Instalación guiada (winget / web)"]
         B -- Sí --> D{"¿Servidor activo?"}
         D -- No --> E["Iniciar 'ollama serve' en segundo plano"]
@@ -100,9 +100,12 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Instalar dependencias
+### 3. Instalar dependencias o instalar en modo desarrollo
 ```bash
 pip install -r requirements.txt
+
+# Opcional: instalar comando globalmente en tu entorno editable
+pip install -e .
 ```
 
 ---
@@ -112,13 +115,21 @@ pip install -r requirements.txt
 ### Ejecución Directa
 Para analizar el directorio actual:
 ```bash
-python app.py
+# Si se instaló con pip install -e .
+arxmapper
+
+# O mediante ejecución modular de Python:
+python -m arxmapper
+
+# O ejecutando el script directamente:
+python src/arxmapper/app.py
 ```
 
 ### Analizar otro proyecto o repositorio
 Puedes especificar la ruta de cualquier carpeta o repositorio mediante el flag `-p` o `--path`:
 ```bash
-python app.py --path C:/ruta/a/mi-proyecto
+arxmapper --path C:/ruta/a/mi-proyecto
+# o: python -m arxmapper --path C:/ruta/a/mi-proyecto
 ```
 
 ### Opciones CLI Disponibles
@@ -131,7 +142,7 @@ python app.py --path C:/ruta/a/mi-proyecto
 
 **Ejemplo de inicio rápido sin asistente:**
 ```bash
-python app.py -p ../otro-repo -m qwen2.5-coder:7b --no-wizard
+arxmapper -p ../otro-repo -m qwen2.5-coder:7b --no-wizard
 ```
 
 ---
@@ -152,13 +163,17 @@ python app.py -p ../otro-repo -m qwen2.5-coder:7b --no-wizard
 
 ```text
 arxmapper-cli/
-├── app.py              # Punto de entrada, TUI Textual (Tree + Markdown), lazy loading y wizard
-├── scanner.py          # Explorador jerárquico con pathlib y filtros de exclusión
-├── ai_engine.py        # Conector Ollama (AsyncClient), gestión de modelos y prompts
-├── pyproject.toml      # Configuración de empaquetado del proyecto CLI
-├── requirements.txt    # Dependencias mínimas (textual, ollama, rich)
-├── LICENSE             # Licencia de código abierto MIT
-└── README.md           # Documentación completa del proyecto
+├── src/
+│   └── arxmapper/
+│       ├── __init__.py         # Inicializador y metadatos del paquete arxmapper
+│       ├── __main__.py         # Punto de entrada para ejecución modular (python -m arxmapper)
+│       ├── app.py              # Punto de entrada, TUI Textual (Tree + Markdown), lazy loading y wizard
+│       ├── scanner.py          # Explorador jerárquico con pathlib y filtros de exclusión
+│       └── ai_engine.py        # Conector Ollama (AsyncClient), gestión de modelos y prompts
+├── pyproject.toml              # Configuración de empaquetado del proyecto CLI (setuptools / PEP 621)
+├── requirements.txt            # Dependencias mínimas (textual, ollama, rich)
+├── LICENSE                     # Licencia de código abierto MIT
+└── README.md                   # Documentación completa del proyecto
 ```
 
 ### Descripción de Módulos:

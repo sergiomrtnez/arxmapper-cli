@@ -32,4 +32,7 @@ dependencies = [
 ]
 
 [project.scripts]
-arxmapper = "app:main"
+arxmapper = "arxmapper.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
