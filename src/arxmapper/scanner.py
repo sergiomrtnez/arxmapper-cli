@@ -68,7 +68,11 @@ class RepoScanner:
 
     def is_ignored_dir(self, dir_name: str) -> bool:
         """Verifica si un directorio debe ser excluido."""
-        return dir_name in self.ignore_dirs or dir_name.startswith((".", "__"))
+        return (
+            dir_name in self.ignore_dirs
+            or dir_name.startswith((".", "__"))
+            or dir_name.endswith(".egg-info")
+        )
 
     def is_text_file(self, file_path: Path) -> bool:
         """Determina si un archivo es de texto analizable."""

@@ -125,6 +125,9 @@ python -m arxmapper
 python src/arxmapper/app.py
 ```
 
+> [!TIP]
+> Si la terminal no reconoce el comando directo `arxmapper` (por ejemplo, si el directorio `Scripts` de Python no está en el `PATH` del sistema), puedes utilizar siempre `python -m arxmapper`.
+
 ### Analizar otro proyecto o repositorio
 Puedes especificar la ruta de cualquier carpeta o repositorio mediante el flag `-p` o `--path`:
 ```bash
@@ -177,9 +180,11 @@ arxmapper-cli/
 ```
 
 ### Descripción de Módulos:
-- **`scanner.py`**: Aísla por completo la interacción con el sistema de archivos. Filtra `.git`, `node_modules`, `venv`, artefactos binarios y gestiona lecturas con codificación segura (`utf-8` con reemplazo).
+- **`__init__.py`**: Inicializa el paquete Python y expone las clases principales (`AIEngine`, `RepoScanner`) y la versión del paquete (`__version__`).
+- **`__main__.py`**: Facilita la invocación directa del paquete como ejecutable (`python -m arxmapper`).
+- **`app.py`**: Orquesta la experiencia de usuario completa. En terminal ofrece el asistente de verificación de modelos y en la TUI implementa una arquitectura reactiva basada en eventos, la pantalla de carga animada (escolopendra) y workers concurrentes exclusivos.
+- **`scanner.py`**: Aísla por completo la interacción con el sistema de archivos. Filtra `.git`, `node_modules`, `venv`, artefactos binarios y de compilación (`*.egg-info`, `dist/`, `build/`), gestionando lecturas con codificación segura (`utf-8` con reemplazo).
 - **`ai_engine.py`**: Administra la comunicación con Ollama mediante `AsyncClient`, previene bloqueos del event loop, formula el prompt arquitectónico estructurado y captura incidencias de red o modelos inexistentes.
-- **`app.py`**: Orquesta la experiencia de usuario completa. En terminal ofrece el asistente de verificación de modelos y en la TUI implementa una arquitectura reactiva basada en eventos y workers concurrentes exclusivos.
 
 ---
 
