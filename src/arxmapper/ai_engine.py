@@ -14,12 +14,43 @@ import shutil
 import subprocess
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import urllib.error
+from urllib.parse import urlparse
 import urllib.request
 
 import ollama
 
 
-DEFAULT_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+def normalize_ollama_host(raw_host: Optional[str] = None) -> str:
+    """Normaliza la URL del host de Ollama para clientes HTTP y librerías cliente.
+
+    Resuelve configuraciones habituales de entorno como OLLAMA_HOST='0.0.0.0' o ':11434'
+    (utilizadas para que el demonio escuche en todas las interfaces de red), garantizando
+    que el cliente HTTP se conecte a una dirección de destino válida (127.0.0.1) y con
+    esquema 'http://' completo.
+    """
+    host = (raw_host if raw_host is not None else os.getenv("OLLAMA_HOST", "")).strip()
+    if not host:
+        return "http://127.0.0.1:11434"
+
+    if host.startswith(":"):
+        return f"http://127.0.0.1{host}"
+
+    if not host.startswith(("http://", "https://")):
+        host = f"http://{host}"
+
+    parsed = urlparse(host)
+    hostname = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 11434
+
+    # En Windows (Winsock), conectar a 0.0.0.0 falla con WSAEADDRNOTAVAIL. Mapear a 127.0.0.1
+    if hostname in ("0.0.0.0", ""):
+        hostname = "127.0.0.1"
+
+    scheme = parsed.scheme or "http"
+    return f"{scheme}://{hostname}:{port}"
+
+
+DEFAULT_HOST: str = normalize_ollama_host()
 
 # Catálogo de modelos recomendados para análisis de código y arquitectura
 RECOMMENDED_MODELS: List[Tuple[str, str, str]] = [
@@ -85,10 +116,11 @@ def is_ollama_installed() -> bool:
     return False
 
 
-def is_service_running(host: str = DEFAULT_HOST) -> bool:
+def is_service_running(host: Optional[str] = None) -> bool:
     """Verifica si el servidor de Ollama está activo y respondiendo solicitudes HTTP."""
+    target_host = normalize_ollama_host(host or DEFAULT_HOST)
     try:
-        req = urllib.request.Request(f"{host.rstrip('/')}/api/tags", method="GET")
+        req = urllib.request.Request(f"{target_host.rstrip('/')}/api/tags", method="GET")
         with urllib.request.urlopen(req, timeout=2.0) as resp:
             return resp.status == 200
     except Exception:
@@ -143,10 +175,11 @@ def install_ollama_windows() -> Tuple[bool, str]:
         return False, f"Excepción durante la instalación: {exc}"
 
 
-def list_local_models(host: str = DEFAULT_HOST) -> List[str]:
+def list_local_models(host: Optional[str] = None) -> List[str]:
     """Obtiene la lista de nombres de modelos descargados localmente en Ollama."""
+    target_host = normalize_ollama_host(host or DEFAULT_HOST)
     try:
-        client = ollama.Client(host=host)
+        client = ollama.Client(host=target_host)
         resp = client.list()
         # ollama python client retorna un diccionario con clave 'models' o lista de objetos
         models = resp.get("models", []) if isinstance(resp, dict) else getattr(resp, "models", [])
@@ -164,11 +197,12 @@ def list_local_models(host: str = DEFAULT_HOST) -> List[str]:
 def pull_model_sync(
     model_name: str,
     progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-    host: str = DEFAULT_HOST,
+    host: Optional[str] = None,
 ) -> bool:
     """Descarga un modelo de Ollama sincronamente emitiendo eventos de progreso."""
+    target_host = normalize_ollama_host(host or DEFAULT_HOST)
     try:
-        client = ollama.Client(host=host)
+        client = ollama.Client(host=target_host)
         stream = client.pull(model=model_name, stream=True)
         for chunk in stream:
             data = chunk if isinstance(chunk, dict) else chunk.__dict__
@@ -184,9 +218,9 @@ def pull_model_sync(
 class AIEngine:
     """Motor de análisis arquitectónico asíncrono sobre Ollama."""
 
-    def __init__(self, model: str = "qwen2.5-coder:7b", host: str = DEFAULT_HOST) -> None:
+    def __init__(self, model: str = "qwen2.5-coder:7b", host: Optional[str] = None) -> None:
         self.model = model
-        self.host = host
+        self.host = normalize_ollama_host(host or DEFAULT_HOST)
         self._async_client = ollama.AsyncClient(host=self.host)
 
     async def analyze_code(self, code: str, file_path: str, repo_root: str = "") -> str:
