@@ -234,11 +234,13 @@ class RepoMapperApp(App):
     #main-container {
         height: 1fr;
         width: 100%;
+        layout: horizontal;
     }
 
     #left-pane {
-        width: 38%;
-        min-width: 34;
+        width: 1fr;
+        min-width: 26;
+        max-width: 38;
         height: 100%;
         border-right: tall $accent;
         background: $panel;
@@ -246,10 +248,13 @@ class RepoMapperApp(App):
     }
 
     #right-pane {
-        width: 62%;
+        width: 2fr;
         height: 100%;
         background: $surface;
         padding: 1 2;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-gutter: stable;
     }
 
     #tree-title {
@@ -265,14 +270,29 @@ class RepoMapperApp(App):
         background: $panel;
     }
 
-    #markdown-scroll {
-        height: 100%;
-        scrollbar-gutter: stable;
-    }
-
     #markdown-content {
+        width: 100%;
+        height: auto;
         margin: 0;
         padding: 0;
+    }
+
+    MarkdownBlock {
+        width: 100%;
+    }
+
+    MarkdownParagraph {
+        width: 100%;
+    }
+
+    MarkdownFence {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    MarkdownTable {
+        width: 100%;
+        overflow-x: auto;
     }
     """
 
@@ -309,9 +329,8 @@ class RepoMapperApp(App):
                 tree.auto_expand = False
                 tree.guide_depth = 2
                 yield tree
-            with Vertical(id="right-pane"):
-                with VerticalScroll(id="markdown-scroll"):
-                    yield Markdown(WELCOME_MARKDOWN, id="markdown-content")
+            with VerticalScroll(id="right-pane"):
+                yield Markdown(WELCOME_MARKDOWN, id="markdown-content")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -425,6 +444,7 @@ class RepoMapperApp(App):
             node.toggle()
             summary_md = self.scanner.get_module_markdown_summary(node_data, self.repo_path)
             self.query_one("#markdown-content", Markdown).update(summary_md)
+            self.query_one("#right-pane", VerticalScroll).scroll_home(animate=False)
             return
 
         # Es un archivo -> Iniciar flujo de análisis perezoso (Lazy Loading)
@@ -443,6 +463,7 @@ class RepoMapperApp(App):
             f"El tiempo de respuesta dependerá de la complejidad del archivo y la velocidad de tu hardware."
         )
         markdown_widget.update(loading_text)
+        self.query_one("#right-pane", VerticalScroll).scroll_home(animate=False)
 
         # Ejecutar análisis en un worker asíncrono para mantener la TUI 100% reactiva
         self.analyze_file_task(target_path, str(rel_path))

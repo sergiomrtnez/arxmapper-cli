@@ -14,7 +14,8 @@
 [Instalación](#-instalación) •
 [Uso](#-guía-de-uso) •
 [Atajos de Teclado](#-atajos-de-teclado) •
-[Estructura del Proyecto](#-estructura-del-proyecto)
+[Estructura](#-estructura-del-proyecto) •
+[Roadmap](ROADMAP.md)
 
 </div>
 
@@ -178,6 +179,7 @@ arxmapper-cli/
 ├── pyproject.toml              # Configuración de empaquetado del proyecto CLI (setuptools / PEP 621)
 ├── requirements.txt            # Dependencias mínimas (textual, ollama, rich)
 ├── LICENSE                     # Licencia de código abierto MIT
+├── ROADMAP.md                  # Hoja de ruta y tareas pendientes priorizadas
 └── README.md                   # Documentación completa del proyecto
 ```
 
