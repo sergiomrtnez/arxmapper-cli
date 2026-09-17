@@ -154,9 +154,11 @@ arxmapper -p ../otro-repo -m qwen2.5-coder:7b --no-wizard
 
 | Tecla | Acción |
 | :---: | :--- |
-| `↑` / `↓` | Navegar verticalmente por el árbol de directorios y archivos. |
-| `Enter` / `Click` | **En carpeta:** Expandir o contraer subdirectorios.<br>**En archivo:** Lanzar análisis arquitectónico bajo demanda. |
-| `r` | **Recargar árbol:** Vuelve a escanear el sistema de archivos del repositorio. |
+| `↑` / `↓` | Navegar verticalmente por el esquema de módulos y componentes. |
+| `Enter` / `Click` | **En módulo/carpeta:** Expandir/contraer y mostrar su ficha arquitectónica en el panel derecho.<br>**En archivo/componente:** Lanzar análisis arquitectónico con IA (Lazy Loading). |
+| `e` | **Expandir todo:** Abre recursivamente todos los niveles del esquema de módulos. |
+| `c` | **Colapsar todo:** Repliega los submódulos a la raíz del esquema. |
+| `r` | **Recargar esquema:** Vuelve a escanear el repositorio y reconstruir el mapa. |
 | `t` | **Alternar tema:** Cambia entre modo oscuro y claro de Textual. |
 | `q` | **Salir:** Cierra la aplicación TUI. |
 

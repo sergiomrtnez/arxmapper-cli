@@ -237,8 +237,8 @@ class RepoMapperApp(App):
     }
 
     #left-pane {
-        width: 32%;
-        min-width: 28;
+        width: 38%;
+        min-width: 34;
         height: 100%;
         border-right: tall $accent;
         background: $panel;
@@ -246,7 +246,7 @@ class RepoMapperApp(App):
     }
 
     #right-pane {
-        width: 68%;
+        width: 62%;
         height: 100%;
         background: $surface;
         padding: 1 2;
@@ -278,7 +278,9 @@ class RepoMapperApp(App):
 
     BINDINGS = [
         Binding("q", "quit", "Salir", priority=True),
-        Binding("r", "refresh_tree", "Recargar Árbol"),
+        Binding("e", "expand_all", "Expandir Esquema"),
+        Binding("c", "collapse_all", "Colapsar Esquema"),
+        Binding("r", "refresh_tree", "Recargar Esquema"),
         Binding("t", "toggle_theme", "Alternar Tema"),
     ]
 
@@ -301,9 +303,11 @@ class RepoMapperApp(App):
         yield Header(show_clock=True)
         with Horizontal(id="main-container"):
             with Vertical(id="left-pane"):
-                yield Static(f"📁 {self.repo_path.name}", id="tree-title")
+                yield Static(f"🏛️ ESQUEMA: {self.repo_path.name}", id="tree-title")
                 tree: Tree[Dict[str, Any]] = Tree(f"/{self.repo_path.name}", id="repo-tree")
                 tree.show_root = True
+                tree.auto_expand = False
+                tree.guide_depth = 2
                 yield tree
             with Vertical(id="right-pane"):
                 with VerticalScroll(id="markdown-scroll"):
@@ -322,32 +326,75 @@ class RepoMapperApp(App):
         self.hierarchy_data = hierarchy
         tree = self.query_one("#repo-tree", Tree)
         tree.clear()
-        tree.root.data = {"path": self.repo_path, "is_dir": True}
-        tree.root.label = f"📁 {self.repo_path.name}"
+        
+        total_files = hierarchy.get("metrics", {}).get("total_files", 0)
+        tree.root.data = hierarchy
+        tree.root.label = (
+            f"[bold cyan]🏛️ [SISTEMA][/bold cyan] "
+            f"[bold white]{self.repo_path.name}[/bold white] "
+            f"[dim cyan]({total_files} archivos)[/dim cyan]"
+        )
         
         # Poblar el árbol en memoria a partir de la jerarquía calculada en segundo plano
-        self._populate_tree_recursive(tree.root, hierarchy)
+        self._populate_tree_recursive(tree.root, hierarchy, depth=1)
         tree.root.expand()
-        self.notify(f"✓ Repositorio '{self.repo_path.name}' indexado con éxito.", title="ArxMapper")
+        self.notify(f"✓ Esquema de '{self.repo_path.name}' cargado ({total_files} componentes).", title="ArxMapper")
 
-    def _populate_tree_recursive(self, tree_node: Any, data: Dict[str, Any]) -> None:
-        """Construye los nodos visuales del Tree a partir del diccionario estructurado."""
+    def _populate_tree_recursive(self, tree_node: Any, data: Dict[str, Any], depth: int = 1) -> None:
+        """Construye los nodos visuales del Tree con formato de esquema arquitectónico."""
         for child in data.get("children", []):
             is_dir = child.get("is_dir", False)
-            child_path: Path = child["path"]
             if is_dir:
+                badge = child.get("badge", "[MÓDULO]")
+                bullet = child.get("bullet", "◈")
+                color = child.get("color", "bold yellow")
+                name = child.get("name", "")
+                metrics = child.get("metrics", {})
+                comp_count = metrics.get("components", 0)
+                tot_files = metrics.get("total_files", 0)
+                
+                label = (
+                    f"[{color}]{bullet} {badge}[/{color}] "
+                    f"[bold white]{name}[/bold white] "
+                    f"[dim]({comp_count} comp, {tot_files} tot)[/dim]"
+                )
+                # Auto-expandir niveles principales (depth <= 2) para visualización inmediata del esquema
                 dir_node = tree_node.add(
-                    f"📁 {child['name']}",
-                    data={"path": child_path, "is_dir": True},
-                    expand=False,
+                    label,
+                    data=child,
+                    expand=(depth <= 2),
                 )
-                self._populate_tree_recursive(dir_node, child)
+                self._populate_tree_recursive(dir_node, child, depth=depth + 1)
             else:
-                icon = RepoScanner._get_file_icon(child_path.suffix.lower())
-                tree_node.add_leaf(
-                    f"{icon} {child['name']}",
-                    data={"path": child_path, "is_dir": False},
-                )
+                c_class = child.get("classification", {})
+                badge = c_class.get("badge", "[COMPONENTE]")
+                bullet = c_class.get("bullet", "●")
+                color = c_class.get("color", "green")
+                name = child.get("name", "")
+                
+                label = f"[{color}]{bullet} {badge}[/{color}] [bright_white]{name}[/bright_white]"
+                tree_node.add_leaf(label, data=child)
+
+    def action_expand_all(self) -> None:
+        """Acción de atajo 'e': expande todo el esquema de módulos."""
+        tree = self.query_one("#repo-tree", Tree)
+        def _expand_recursive(node: Any) -> None:
+            node.expand()
+            for child in node.children:
+                _expand_recursive(child)
+        _expand_recursive(tree.root)
+        self.notify("Esquema completamente expandido.", title="ArxMapper")
+
+    def action_collapse_all(self) -> None:
+        """Acción de atajo 'c': colapsa todos los submódulos a la raíz."""
+        tree = self.query_one("#repo-tree", Tree)
+        def _collapse_recursive(node: Any) -> None:
+            for child in node.children:
+                _collapse_recursive(child)
+                child.collapse()
+        _collapse_recursive(tree.root)
+        tree.root.expand()
+        self.notify("Esquema colapsado a módulos raíz.", title="ArxMapper")
 
     def action_refresh_tree(self) -> None:
         """Acción de atajo 'r': relanza la pantalla de carga y reescanea el repositorio."""
@@ -363,7 +410,7 @@ class RepoMapperApp(App):
     def on_tree_node_selected(self, event: Tree.NodeSelected[Dict[str, Any]]) -> None:
         """Captura la selección de un nodo en el árbol.
 
-        Si es un directorio: expande o contrae.
+        Si es un directorio/módulo: expande o contrae y muestra la ficha del módulo en Markdown.
         Si es un archivo: activa el análisis perezoso con el LLM (Lazy Loading).
         """
         node = event.node
@@ -376,6 +423,8 @@ class RepoMapperApp(App):
 
         if is_dir:
             node.toggle()
+            summary_md = self.scanner.get_module_markdown_summary(node_data, self.repo_path)
+            self.query_one("#markdown-content", Markdown).update(summary_md)
             return
 
         # Es un archivo -> Iniciar flujo de análisis perezoso (Lazy Loading)
