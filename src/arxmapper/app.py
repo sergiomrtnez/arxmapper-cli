@@ -641,8 +641,8 @@ def run_ollama_wizard() -> str:
 
         def on_progress(chunk: Dict[str, Any]) -> None:
             status = chunk.get("status", "")
-            completed = chunk.get("completed", 0)
-            total = chunk.get("total", 0)
+            completed = chunk.get("completed") or 0
+            total = chunk.get("total") or 0
             if total > 0:
                 progress.update(download_task, completed=completed, total=total, description=f"{status}: {model_to_pull}")
             elif status:
