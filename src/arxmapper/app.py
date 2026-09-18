@@ -37,8 +37,16 @@ try:
     from .ai_engine import AIEngine, RECOMMENDED_MODELS
     from .scanner import RepoScanner
 except ImportError:
+    import sys
+    from pathlib import Path
+    _current_dir = str(Path(__file__).resolve().parent)
+    if _current_dir not in sys.path:
+        sys.path.insert(0, _current_dir)
+    # pyrefly: ignore [missing-import]
     import ai_engine
+    # pyrefly: ignore [missing-import]
     from ai_engine import AIEngine, RECOMMENDED_MODELS
+    # pyrefly: ignore [missing-import]
     from scanner import RepoScanner
 
 
@@ -49,38 +57,38 @@ console = Console()
 # ==============================================================================
 
 LOGO_ART = r"""
-[bold bright_black]         \ \          / /
-          \ \________/ /
-       ___/::::::::::::\___[/bold bright_black]
+[bold bright_black]         \\ \\          / /
+          \\ \\________/ /
+       ___/::::::::::::\\___[/bold bright_black]
 [bold yellow]  -----[/bold yellow][bold bright_black]|  _. [/bold bright_black][bold red](██)(██)[/bold red][bold bright_black] ._  |[/bold bright_black][bold yellow]-----
-   -----\_//    [bold yellow]▼▼[/bold yellow]    \\_/-----[/bold yellow]
-[bold bright_black]          /==============\ [/bold bright_black]
-[bold yellow]    -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-      ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]            /==============\ [/bold bright_black]
-[bold yellow]      -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-        ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]                /==============\ [/bold bright_black]
-[bold yellow]          -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-            ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]                  /==============\ [/bold bright_black]
-[bold yellow]            -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-              ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]                /==============\ [/bold bright_black]
-[bold yellow]          -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-            ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]            /==============\ [/bold bright_black]
-[bold yellow]      -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-        ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]        /==============\ [/bold bright_black]
-[bold yellow]  -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-    ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]          /==============\ [/bold bright_black]
-[bold yellow]    -----[/bold yellow][bold bright_black]/\__          __/\[/bold bright_black][bold yellow]-----
-      ---\_//[bold bright_black]==========[/bold bright_black]\\_/---[/bold yellow]
-[bold bright_black]             \        /
-              \______/[/bold bright_black]
-"""
+   -----\\_//    [bold yellow]▼▼[/bold yellow]    \\\\_/-----[/bold yellow]
+[bold bright_black]          /==============\\ [/bold bright_black]
+[bold yellow]    -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+      ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]            /==============\\ [/bold bright_black]
+[bold yellow]      -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+        ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]                /==============\\ [/bold bright_black]
+[bold yellow]          -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+            ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]                  /==============\\ [/bold bright_black]
+[bold yellow]            -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+              ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]                /==============\\ [/bold bright_black]
+[bold yellow]          -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+            ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]            /==============\\ [/bold bright_black]
+[bold yellow]      -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+        ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]        /==============\\ [/bold bright_black]
+[bold yellow]  -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+    ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]          /==============\\ [/bold bright_black]
+[bold yellow]    -----[/bold yellow][bold bright_black]/\\__          __/\\[/bold bright_black][bold yellow]-----
+      ---\\_//[bold bright_black]==========[/bold bright_black]\\\\_/---[/bold yellow]
+[bold bright_black]             \\        /
+              \\______/[/bold bright_black]
+""".replace("[", "\u200b[")
 
 WELCOME_MARKDOWN = """# 🏛️ ArxMapper - Arquitectura con IA Local
 
