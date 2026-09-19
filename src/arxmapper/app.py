@@ -143,6 +143,7 @@ class ScolopendraLogo(Static):
             self.is_completed = True
             if self._timer:
                 self._timer.stop()
+                self._timer = None
 
 
 # ==============================================================================

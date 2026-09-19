@@ -117,12 +117,16 @@ class RepoScanner:
         parts_lower = [p.lower() for p in file_path.parts]
         is_test = (
             any(t in parts_lower for t in TEST_INDICATORS)
-            or name_lower.startswith("test_")
-            or name_lower.endswith("_test.py")
+            or name_lower.startswith(("test_", "test-"))
+            or name_lower.endswith(("_test.py", "-test.py"))
             or ".test." in name_lower
             or ".spec." in name_lower
-            or stem_lower.endswith("test")
-            or stem_lower.endswith("tests")
+            or stem_lower in ("test", "tests")
+            or stem_lower.endswith(("_test", "-test", ".test", "_tests", "-tests"))
+            or (
+                (stem_lower.endswith("test") or stem_lower.endswith("tests"))
+                and not stem_lower.endswith(("latest", "contest", "fastest", "protest", "attest", "detest", "pytest"))
+            )
         )
         if is_test:
             return {
